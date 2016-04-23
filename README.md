@@ -1,37 +1,105 @@
-# ExData_Plotting2
-Exploratory Data Analysis - Coursera - Assignment 2
+### Introduction
 
-Instructions
-Fine particulate matter (PM2.5) is an ambient air pollutant for which there is strong evidence that it is harmful to human health. In the United States, the Environmental Protection Agency (EPA) is tasked with setting national ambient air quality standards for fine PM and for tracking the emissions of this pollutant into the atmosphere. Approximatly every 3 years, the EPA releases its database on emissions of PM2.5. This database is known as the National Emissions Inventory (NEI). You can read more information about the NEI at the EPA National Emissions Inventory web site.
+This second programming assignment will require you to write an R
+function that is able to cache potentially time-consuming computations.
+For example, taking the mean of a numeric vector is typically a fast
+operation. However, for a very long vector, it may take too long to
+compute the mean, especially if it has to be computed repeatedly (e.g.
+in a loop). If the contents of a vector are not changing, it may make
+sense to cache the value of the mean so that when we need it again, it
+can be looked up in the cache rather than recomputed. In this
+Programming Assignment you will take advantage of the scoping rules of
+the R language and how they can be manipulated to preserve state inside
+of an R object.
 
-For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
+### Example: Caching the Mean of a Vector
 
-Dataless 
-The data for this assignment are available from the course web site as a single zip file:
+In this example we introduce the `<<-` operator which can be used to
+assign a value to an object in an environment that is different from the
+current environment. Below are two functions that are used to create a
+special object that stores a numeric vector and caches its mean.
 
-Data for Peer Assessment [29Mb]
-The zip file contains two files:
+The first function, `makeVector` creates a special "vector", which is
+really a list containing a function to
 
-PM2.5 Emissions Data (summarySCC_PM25.rds): This file contains a data frame with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. For each year, the table contains number of tons of PM2.5 emitted from a specific type of source for the entire year. Here are the first few rows.
+1.  set the value of the vector
+2.  get the value of the vector
+3.  set the value of the mean
+4.  get the value of the mean
 
-##     fips      SCC Pollutant Emissions  type year
-## 4  09001 10100401  PM25-PRI    15.714 POINT 1999
-## 8  09001 10100404  PM25-PRI   234.178 POINT 1999
-## 12 09001 10100501  PM25-PRI     0.128 POINT 1999
-## 16 09001 10200401  PM25-PRI     2.036 POINT 1999
-## 20 09001 10200504  PM25-PRI     0.388 POINT 1999
-## 24 09001 10200602  PM25-PRI     1.490 POINT 1999
-fips: A five-digit number (represented as a string) indicating the U.S. county
-SCC: The name of the source as indicated by a digit string (see source code classification table)
-Pollutant: A string indicating the pollutant
-Emissions: Amount of PM2.5 emitted, in tons
-type: The type of source (point, non-point, on-road, or non-road)
-year: The year of emissions recorded
-Source Classification Code Table (Source_Classification_Code.rds): This table provides a mapping from the SCC digit strings in the Emissions table to the actual name of the PM2.5 source. The sources are categorized in a few different ways from more general to more specific and you may choose to explore whatever categories you think are most useful. For example, source “10100101” is known as “Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal”.
+<!-- -->
 
-You can read each of the two files using the readRDS() function in R. For example, reading in each file can be done with the following code:
+    makeVector <- function(x = numeric()) {
+            m <- NULL
+            set <- function(y) {
+                    x <<- y
+                    m <<- NULL
+            }
+            get <- function() x
+            setmean <- function(mean) m <<- mean
+            getmean <- function() m
+            list(set = set, get = get,
+                 setmean = setmean,
+                 getmean = getmean)
+    }
 
-## This first line will likely take a few seconds. Be patient!
-NEI <- readRDS("summarySCC_PM25.rds")
-SCC <- readRDS("Source_Classification_Code.rds")
-as long as each of those files is in your current working directory (check by calling dir() and see if those files are in the listing).
+The following function calculates the mean of the special "vector"
+created with the above function. However, it first checks to see if the
+mean has already been calculated. If so, it `get`s the mean from the
+cache and skips the computation. Otherwise, it calculates the mean of
+the data and sets the value of the mean in the cache via the `setmean`
+function.
+
+    cachemean <- function(x, ...) {
+            m <- x$getmean()
+            if(!is.null(m)) {
+                    message("getting cached data")
+                    return(m)
+            }
+            data <- x$get()
+            m <- mean(data, ...)
+            x$setmean(m)
+            m
+    }
+
+### Assignment: Caching the Inverse of a Matrix
+
+Matrix inversion is usually a costly computation and there may be some
+benefit to caching the inverse of a matrix rather than computing it
+repeatedly (there are also alternatives to matrix inversion that we will
+not discuss here). Your assignment is to write a pair of functions that
+cache the inverse of a matrix.
+
+Write the following functions:
+
+1.  `makeCacheMatrix`: This function creates a special "matrix" object
+    that can cache its inverse.
+2.  `cacheSolve`: This function computes the inverse of the special
+    "matrix" returned by `makeCacheMatrix` above. If the inverse has
+    already been calculated (and the matrix has not changed), then
+    `cacheSolve` should retrieve the inverse from the cache.
+
+Computing the inverse of a square matrix can be done with the `solve`
+function in R. For example, if `X` is a square invertible matrix, then
+`solve(X)` returns its inverse.
+
+For this assignment, assume that the matrix supplied is always
+invertible.
+
+In order to complete this assignment, you must do the following:
+
+1.  Fork the GitHub repository containing the stub R files at
+    [https://github.com/rdpeng/ProgrammingAssignment2](https://github.com/rdpeng/ProgrammingAssignment2)
+    to create a copy under your own account.
+2.  Clone your forked GitHub repository to your computer so that you can
+    edit the files locally on your own machine.
+3.  Edit the R file contained in the git repository and place your
+    solution in that file (please do not rename the file).
+4.  Commit your completed R file into YOUR git repository and push your
+    git branch to the GitHub repository under your account.
+5.  Submit to Coursera the URL to your GitHub repository that contains
+    the completed R code for the assignment.
+
+### Grading
+
+This assignment will be graded via peer assessment.
