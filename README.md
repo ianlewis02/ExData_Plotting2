@@ -1,105 +1,103 @@
-### Introduction
+# Exploratory Data Analysis - Coursera - Assignment 2 #
 
-This second programming assignment will require you to write an R
-function that is able to cache potentially time-consuming computations.
-For example, taking the mean of a numeric vector is typically a fast
-operation. However, for a very long vector, it may take too long to
-compute the mean, especially if it has to be computed repeatedly (e.g.
-in a loop). If the contents of a vector are not changing, it may make
-sense to cache the value of the mean so that when we need it again, it
-can be looked up in the cache rather than recomputed. In this
-Programming Assignment you will take advantage of the scoping rules of
-the R language and how they can be manipulated to preserve state inside
-of an R object.
+# Instructions #
+Fine particulate matter (PM2.5) is an ambient air pollutant for which there is strong evidence that it is harmful to human health. In the United States, the Environmental Protection Agency (EPA) is tasked with setting national ambient air quality standards for fine PM and for tracking the emissions of this pollutant into the atmosphere. Approximately every 3 years, the EPA releases its database on emissions of PM2.5. This database is known as the National Emissions Inventory (NEI). You can read more information about the NEI at the EPA National Emissions Inventory web site.
 
-### Example: Caching the Mean of a Vector
+For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
 
-In this example we introduce the `<<-` operator which can be used to
-assign a value to an object in an environment that is different from the
-current environment. Below are two functions that are used to create a
-special object that stores a numeric vector and caches its mean.
+# Data Source  #
+The data for this assignment is a single zip file available from: [https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip](https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip "Click Here")
 
-The first function, `makeVector` creates a special "vector", which is
-really a list containing a function to
+The zip file contains two files:
 
-1.  set the value of the vector
-2.  get the value of the vector
-3.  set the value of the mean
-4.  get the value of the mean
+## PM2.5 Emissions Data (summarySCC_PM25.rds) ##
+This file contains a data frame with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. For each year, the table contains number of tons of PM2.5 emitted from a specific type of source for the entire year. Here are the first few rows.
 
-<!-- -->
+- fips  SCC Pollutant Emissions  type year
+- 4  09001 10100401  PM25-PRI15.714 POINT 1999
+- 8  09001 10100404  PM25-PRI   234.178 POINT 1999
+- 12 09001 10100501  PM25-PRI 0.128 POINT 1999
+- 16 09001 10200401  PM25-PRI 2.036 POINT 1999
+- 20 09001 10200504  PM25-PRI 0.388 POINT 1999
+- 24 09001 10200602  PM25-PRI 1.490 POINT 1999
 
-    makeVector <- function(x = numeric()) {
-            m <- NULL
-            set <- function(y) {
-                    x <<- y
-                    m <<- NULL
-            }
-            get <- function() x
-            setmean <- function(mean) m <<- mean
-            getmean <- function() m
-            list(set = set, get = get,
-                 setmean = setmean,
-                 getmean = getmean)
-    }
+fips: A five-digit number (represented as a string) indicating the U.S. county
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+Pollutant: A string indicating the pollutant
+Emissions: Amount of PM2.5 emitted, in tons
+type: The type of source (point, non-point, on-road, or non-road)
+year: The year of emissions recorded
 
-The following function calculates the mean of the special "vector"
-created with the above function. However, it first checks to see if the
-mean has already been calculated. If so, it `get`s the mean from the
-cache and skips the computation. Otherwise, it calculates the mean of
-the data and sets the value of the mean in the cache via the `setmean`
-function.
+## Source Classification Code Table (Source_Classification_Code.rds) ##
+This table provides a mapping from the SCC digit strings in the Emissions table to the actual name of the PM2.5 source. The sources are categorized in a few different ways from more general to more specific and you may choose to explore whatever categories you think are most useful. For example, source “10100101” is known as “Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal”.
 
-    cachemean <- function(x, ...) {
-            m <- x$getmean()
-            if(!is.null(m)) {
-                    message("getting cached data")
-                    return(m)
-            }
-            data <- x$get()
-            m <- mean(data, ...)
-            x$setmean(m)
-            m
-    }
+The following piece of code will load the libraries and data required for the plots (Note: the SCC data is not needed for every question!)
+    
+    	##  Load the R libraries required for the function
+    	library(data.table)
+    	library(ggplot2)
+    	library(grid)
+    	library(httr)
+    	library(plyr)
+    	library(scales)
+    
+    	##  Set the working directory
+    	setwd("C:/Users/Ian/R/Rprogramming/assignment21/exdata-data-NEI_data")
+    
+    	##  Read PM2.5 Emissions Data (summarySCC_PM25.rds)
+    	##  This file contains a data frame with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. 
+    	##  For each year, the table contains number of tons of PM2.5 emitted from a specific type of source for the entire year 
+    
+    	NEI <- readRDS("summarySCC_PM25.rds")
+    	print('Load of NEI data set completed')
+    
+    	##  Read Source Classification Code Table (Source_Classification_Code.rds): 
+    	##  This table provides a mapping from the SCC digit strings in the Emissions table to the actual name of the PM2.5 source
+    	##  The sources are categorized in a few different ways from more general to more specific
+    
+    	SCC <- readRDS("Source_Classification_Code.rds")
+    	print('Load of SCC data set completed')
 
-### Assignment: Caching the Inverse of a Matrix
+# Assignment  #
+The overall goal of this assignment is to explore the National Emissions Inventory database and see what it say about fine particulate matter pollution in the United states over the 10-year period 1999–2008. You may use any R package you want to support your analysis. You must address the following questions and tasks in your exploratory analysis. For each question/task you will need to make a single plot. Unless specified, you can use any plotting system in R to make your plot.
 
-Matrix inversion is usually a costly computation and there may be some
-benefit to caching the inverse of a matrix rather than computing it
-repeatedly (there are also alternatives to matrix inversion that we will
-not discuss here). Your assignment is to write a pair of functions that
-cache the inverse of a matrix.
+## Question 1 ##
 
-Write the following functions:
+Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Using the base plotting system, make a plot showing the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.
 
-1.  `makeCacheMatrix`: This function creates a special "matrix" object
-    that can cache its inverse.
-2.  `cacheSolve`: This function computes the inverse of the special
-    "matrix" returned by `makeCacheMatrix` above. If the inverse has
-    already been calculated (and the matrix has not changed), then
-    `cacheSolve` should retrieve the inverse from the cache.
+### Code for Question 1 ###
+    
+    	##  Assignment Question - One
+    	##  Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? 
+    
+    	print('Question One - Started')
+    	NEI_aggregate <- aggregate(NEI[, 'Emissions'], by=list(NEI$year), FUN=sum)
+    	NEI_aggregate$PM <- round(NEI_aggregate[,2]/1000,2)
+    
+    	###  Generate the plot of the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008
+    	
+    	png(filename='plot1.png')
+    	barplot(NEI_aggregate$PM, names.arg=NEI_aggregate$Group.1, col="blue",
+      	main=expression('Total Emission of PM'[2.5]*' in the US from 1999 to 2008'),
+    
+      	xlab='Year', ylab=expression(paste('PM', ''[2.5], ' in Kilotons')))
+    	dev.off()
+    	print('Question One - Plot Complete')
 
-Computing the inverse of a square matrix can be done with the `solve`
-function in R. For example, if `X` is a square invertible matrix, then
-`solve(X)` returns its inverse.
+### Plot for Question 1 ###
 
-For this assignment, assume that the matrix supplied is always
-invertible.
 
-In order to complete this assignment, you must do the following:
+## Question 2 ##
+Have total emissions from PM2.5 decreased in the Baltimore City, Maryland (fips == "24510") from 1999 to 2008? Use the base plotting system to make a plot answering this question.
 
-1.  Fork the GitHub repository containing the stub R files at
-    [https://github.com/rdpeng/ProgrammingAssignment2](https://github.com/rdpeng/ProgrammingAssignment2)
-    to create a copy under your own account.
-2.  Clone your forked GitHub repository to your computer so that you can
-    edit the files locally on your own machine.
-3.  Edit the R file contained in the git repository and place your
-    solution in that file (please do not rename the file).
-4.  Commit your completed R file into YOUR git repository and push your
-    git branch to the GitHub repository under your account.
-5.  Submit to Coursera the URL to your GitHub repository that contains
-    the completed R code for the assignment.
+## Question 3 ##
+Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? Use the ggplot2 plotting system to make a plot answer this question.
 
-### Grading
+## Question 4 ##
+Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
 
-This assignment will be graded via peer assessment.
+## Question 5 ##
+How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
+
+## Question 6 ##
+Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources in Los Angeles County, California (fips == "06037"). Which city has seen greater changes over time in motor vehicle emissions?
